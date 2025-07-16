@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppService } from '~/app.service';
 import { UsersModule } from '~/modules/users/users.module';
 import { getPropertyConfig } from '~/utils/configService';
 import { Environment } from '~/utils/constants';
@@ -15,11 +16,12 @@ import { Environment } from '~/utils/constants';
         type: 'mongodb',
         url: getPropertyConfig(config, 'MONGO_URL'),
         database: getPropertyConfig(config, 'MONGO_DATABASE'),
-        synchronize: true,
+        synchronize: getPropertyConfig(config, 'NODE_ENV') === 'development',
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
       }),
     }),
     UsersModule,
   ],
+  providers: [AppService],
 })
 export class AppModule {}

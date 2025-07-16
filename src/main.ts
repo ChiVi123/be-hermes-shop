@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '~/app.module';
 import { getPropertyConfig } from '~/utils/configService';
@@ -7,13 +8,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(envConfig);
   const port = getPropertyConfig(configService, 'PORT');
+  const apiVersion = getPropertyConfig(configService, 'API_VERSION');
+  const logger = new Logger(bootstrap.name);
 
-  app.setGlobalPrefix('v1');
+  app.enableShutdownHooks();
+  app.setGlobalPrefix(apiVersion ?? 'v1');
   await app.listen(port ?? 8080);
 
-  console.log(`Application is running on: ${await app.getUrl()}`);
+  logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 
 bootstrap().catch((err) => {
-  console.error('Error during bootstrap:', err);
+  const logger = new Logger(bootstrap.name);
+  logger.error('Error during bootstrap:', err);
 });
