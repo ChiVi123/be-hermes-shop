@@ -14,6 +14,7 @@ import { Environment } from '~/utils/constants';
       useFactory: (config: ConfigService<Environment>) => ({
         type: 'mongodb',
         url: getPropertyConfig(config, 'MONGO_URL'),
+        database: getPropertyConfig(config, 'MONGO_DATABASE'),
         synchronize: true,
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
       }),

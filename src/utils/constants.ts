@@ -5,6 +5,7 @@ export interface Environment {
   NODE_ENV: 'production' | 'development' | 'debug' | 'test';
   API_VERSION: `v${number}`;
   MONGO_URL: string;
+  MONGO_DATABASE: string;
 }
 
 export const envConfig = ConfigService<Environment>;
