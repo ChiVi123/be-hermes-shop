@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 
-export interface Environment {
+interface Environment {
   PORT: number;
   NODE_ENV: 'production' | 'development' | 'debug' | 'test';
   API_VERSION: `v${number}`;
@@ -9,3 +9,4 @@ export interface Environment {
 }
 
 export const envConfig = ConfigService<Environment>;
+export type EnvConfig = ConfigService<Environment>;
