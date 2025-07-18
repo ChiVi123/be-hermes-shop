@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
+import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
+import { UsersService } from '~/modules/users/users.service';
 
 @Controller('users')
 export class UsersController {
@@ -13,8 +13,8 @@ export class UsersController {
   }
 
   @Get()
-  async findAll() {
-    return this.usersService.findAll();
+  findAll(@Query() query: any) {
+    return this.usersService.findAll(query);
   }
 
   @Get(':id')
