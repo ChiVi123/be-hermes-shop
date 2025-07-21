@@ -16,6 +16,12 @@ export class User {
 
   @Prop({ default: false })
   isActive: boolean;
+
+  @Prop()
+  codeId: string;
+
+  @Prop()
+  codeExpired: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
