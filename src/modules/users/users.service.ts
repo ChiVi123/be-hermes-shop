@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import aqp from 'api-query-params';
-import { Model } from 'mongoose';
+import dayjs from 'dayjs';
+import mongoose, { Model } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
 import { User } from '~/modules/users/entities/user.entity';
@@ -19,6 +21,21 @@ export class UsersService {
     const newUser = new this.userModel({
       ...createUserDto,
       password: hashedPassword,
+    });
+    return newUser.save();
+  }
+
+  async register(createUserDto: CreateUserDto) {
+    const hashedPassword = await hashPassword(createUserDto.password);
+    if (!hashedPassword) {
+      throw new Error('Failed to hash password');
+    }
+    const newUser = new this.userModel({
+      ...createUserDto,
+      password: hashedPassword,
+      isActive: false,
+      codeId: uuidv4(),
+      codeExpired: dayjs().add(1, 'minutes'),
     });
     return newUser.save();
   }
@@ -54,11 +71,19 @@ export class UsersService {
     return this.userModel.findById(id).exec();
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  findByEmail(email: string) {
+    return this.userModel.findOne({ email }).exec();
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  update({ _id, ...updateUserDto }: UpdateUserDto) {
+    return this.userModel.findByIdAndUpdate(_id, updateUserDto, { returnDocument: 'after' }).select('-password').exec();
+  }
+
+  remove(id: string) {
+    if (mongoose.isValidObjectId(id)) {
+      return this.userModel.deleteOne({ _id: id }).exec();
+    } else {
+      throw new BadRequestException(`Invalid user ID format {id}: ${id}`);
+    }
   }
 }
