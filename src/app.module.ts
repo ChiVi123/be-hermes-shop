@@ -1,7 +1,7 @@
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { Logger, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { join } from 'path';
@@ -9,20 +9,21 @@ import { AppController } from '~/app.controller';
 import { AppService } from '~/app.service';
 import { AuthModule } from '~/auth/auth.module';
 import { JwtAuthGuard } from '~/auth/passport/jwt-auth.guard';
+import { Environment } from '~/config/environment.class';
+import { validateEnvironment } from '~/config/validation.util';
 import { UsersModule } from '~/modules/users/users.module';
-import { getPropertyConfig } from '~/utils/configService';
-import { envConfig, EnvConfig } from '~/utils/constants';
 
+const MAIL_PORT = 465;
 const logger = new Logger('onConnectionCreate', { timestamp: true });
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [envConfig],
-      useFactory: (config: EnvConfig) => ({
-        uri: getPropertyConfig(config, 'MONGO_URI'),
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Environment, true>) => ({
+        uri: config.get('MONGO_URI', { infer: true }),
         onConnectionCreate(connection) {
           connection.on('connected', () => logger.log('Mongoose connected'));
           connection.on('open', () => logger.log('Mongoose open'));
@@ -35,16 +36,16 @@ const logger = new Logger('onConnectionCreate', { timestamp: true });
     }),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [envConfig],
-      useFactory: (config: EnvConfig) => ({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Environment, true>) => ({
         transport: {
-          service: getPropertyConfig(config, 'MAIL_SERVICE'),
-          host: getPropertyConfig(config, 'MAIL_HOST'),
-          port: getPropertyConfig(config, 'MAIL_PORT'),
-          secure: getPropertyConfig(config, 'MAIL_PORT') === 465, // true for 465, false for other ports
+          service: config.get('MAIL_SERVICE', { infer: true }),
+          host: config.get('MAIL_HOST', { infer: true }),
+          port: config.get('MAIL_PORT', { infer: true }),
+          secure: config.get('MAIL_PORT', { infer: true }) === MAIL_PORT, // true for 465, false for other ports
           auth: {
-            user: getPropertyConfig(config, 'MAIL_USER'),
-            pass: getPropertyConfig(config, 'MAIL_PASSWORD'),
+            user: config.get('MAIL_USER', { infer: true }),
+            pass: config.get('MAIL_PASSWORD', { infer: true }),
           },
         },
         defaults: {

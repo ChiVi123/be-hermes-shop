@@ -4,13 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import aqp from 'api-query-params';
 import dayjs from 'dayjs';
-import mongoose, { Document, Model, Types } from 'mongoose';
+import mongoose, { Document, Model, SortOrder, Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { Environment } from '~/config/environment.class';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
 import { User } from '~/modules/users/entities/user.entity';
-import { getPropertyConfig } from '~/utils/configService';
-import { Environment } from '~/utils/constants';
 import { hashPassword } from '~/utils/hash';
 
 type DocumentUser = Document<unknown, object, User, object> & User & { _id: Types.ObjectId };
@@ -23,7 +22,7 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private readonly mailerService: MailerService,
-    private readonly configService: ConfigService<Environment>,
+    private readonly config: ConfigService<Environment, true>,
   ) {}
 
   public async create(createUserDto: CreateUserDto) {
@@ -44,8 +43,8 @@ export class UsersService {
       throw new Error('Failed to hash password');
     }
 
-    const verifyAccountExpireTime = getPropertyConfig(this.configService, 'VERIFY_ACCOUNT_EXPIRE_TIME') ?? 5;
-    const verifyAccountExpireUnit = getPropertyConfig(this.configService, 'VERIFY_ACCOUNT_EXPIRE_UNIT') ?? 'minutes';
+    const verifyAccountExpireTime = this.config.get('VERIFY_ACCOUNT_EXPIRE_TIME', { infer: true }) || 24;
+    const verifyAccountExpireUnit = this.config.get('VERIFY_ACCOUNT_EXPIRE_UNIT', { infer: true }) || 'minutes';
     const codeId = uuidv4();
     const newUser = new this.userModel({
       ...createUserDto,
@@ -61,10 +60,10 @@ export class UsersService {
     return { _id: savedUser._id };
   }
 
-  public async findAll(query: any) {
+  public async findAll(query: { [key: string]: any }) {
     const { filter, sort } = aqp(query);
-    const page = parseInt(query.page as any) || 1;
-    const pageSize = parseInt(query.pageSize as any) || 10;
+    const page = parseInt(query.page as string) || 1;
+    const pageSize = parseInt(query.pageSize as string) || 10;
     const skip = (page - 1) * pageSize;
 
     if (filter.page) delete filter.page;
@@ -72,7 +71,7 @@ export class UsersService {
 
     const users = await this.userModel
       .find(filter)
-      .sort(sort as any)
+      .sort(sort as string | { [key: string]: SortOrder | { $meta: any } } | [string, SortOrder][] | undefined | null)
       .skip(skip)
       .limit(pageSize)
       .select('-password')

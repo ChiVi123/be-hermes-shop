@@ -2,8 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { getPropertyConfig } from '~/utils/configService';
-import { Environment } from '~/utils/constants';
+import { Environment } from '~/config/environment.class';
 
 interface JwtPayload {
   sub: string;
@@ -13,8 +12,8 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private configService: ConfigService<Environment>) {
-    const secret = getPropertyConfig(configService, 'ACCESS_TOKEN_SECRET_SIGNATURE');
+  constructor(private readonly config: ConfigService<Environment, true>) {
+    const secret = config.get('ACCESS_TOKEN_SECRET_SIGNATURE', { infer: true });
     if (!secret) {
       throw new Error('ACCESS_TOKEN_SECRET_SIGNATURE is not defined');
     }
