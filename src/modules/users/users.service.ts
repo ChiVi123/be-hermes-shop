@@ -1,19 +1,32 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import aqp from 'api-query-params';
 import dayjs from 'dayjs';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { Document, Model, Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
 import { User } from '~/modules/users/entities/user.entity';
+import { getPropertyConfig } from '~/utils/configService';
+import { Environment } from '~/utils/constants';
 import { hashPassword } from '~/utils/hash';
+
+type DocumentUser = Document<unknown, object, User, object> & User & { _id: Types.ObjectId };
+
+const ACCOUNT_IS_NOT_ACTIVE = false;
+const ACCOUNT_IS_ACTIVE = true;
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService<Environment>,
+  ) {}
 
-  async create(createUserDto: CreateUserDto) {
+  public async create(createUserDto: CreateUserDto) {
     const hashedPassword = await hashPassword(createUserDto.password);
     if (!hashedPassword) {
       throw new Error('Failed to hash password');
@@ -25,22 +38,30 @@ export class UsersService {
     return newUser.save();
   }
 
-  async register(createUserDto: CreateUserDto) {
+  public async register(createUserDto: CreateUserDto) {
     const hashedPassword = await hashPassword(createUserDto.password);
     if (!hashedPassword) {
       throw new Error('Failed to hash password');
     }
+
+    const verifyAccountExpireTime = getPropertyConfig(this.configService, 'VERIFY_ACCOUNT_EXPIRE_TIME') ?? 5;
+    const verifyAccountExpireUnit = getPropertyConfig(this.configService, 'VERIFY_ACCOUNT_EXPIRE_UNIT') ?? 'minutes';
+    const codeId = uuidv4();
     const newUser = new this.userModel({
       ...createUserDto,
       password: hashedPassword,
       isActive: false,
-      codeId: uuidv4(),
-      codeExpired: dayjs().add(1, 'minutes'),
+      codeId,
+      codeExpired: dayjs().add(verifyAccountExpireTime, verifyAccountExpireUnit),
     });
-    return newUser.save();
+    const savedUser = await newUser.save();
+
+    this.sendMailAccountActivation(savedUser, codeId);
+
+    return { _id: savedUser._id };
   }
 
-  async findAll(query: any) {
+  public async findAll(query: any) {
     const { filter, sort } = aqp(query);
     const page = parseInt(query.page as any) || 1;
     const pageSize = parseInt(query.pageSize as any) || 10;
@@ -67,23 +88,62 @@ export class UsersService {
     };
   }
 
-  findOne(id: number) {
+  public findOne(id: number) {
     return this.userModel.findById(id).exec();
   }
 
-  findByEmail(email: string) {
+  public findByEmail(email: string) {
     return this.userModel.findOne({ email }).exec();
   }
 
-  update({ _id, ...updateUserDto }: UpdateUserDto) {
+  public update({ _id, ...updateUserDto }: UpdateUserDto) {
     return this.userModel.findByIdAndUpdate(_id, updateUserDto, { returnDocument: 'after' }).select('-password').exec();
   }
 
-  remove(id: string) {
-    if (mongoose.isValidObjectId(id)) {
-      return this.userModel.deleteOne({ _id: id }).exec();
-    } else {
+  public async verify(email: string, codeId: string) {
+    const user = await this.userModel.findOne({ email, codeId, isActive: ACCOUNT_IS_NOT_ACTIVE }).exec();
+    if (!user) {
+      throw new NotFoundException('User not found or already active');
+    }
+
+    this.handleUserCodeId(user.codeExpired);
+
+    await user.updateOne({ isActive: ACCOUNT_IS_ACTIVE }).exec();
+
+    return { message: 'User account activated successfully' };
+  }
+
+  public remove(id: string) {
+    if (!mongoose.isValidObjectId(id)) {
       throw new BadRequestException(`Invalid user ID format {id}: ${id}`);
     }
+
+    return this.userModel.deleteOne({ _id: id }).exec();
+  }
+
+  private handleUserCodeId(codeExpired: Date) {
+    const isExpired = this.checkUserCodeIdExpired(codeExpired);
+    if (isExpired) {
+      throw new BadRequestException('Verification code expired');
+    }
+  }
+
+  private checkUserCodeIdExpired(codeExpired: Date): boolean {
+    return dayjs().isAfter(dayjs(codeExpired));
+  }
+
+  private sendMailAccountActivation(user: DocumentUser, codeId: string): void {
+    this.mailerService
+      .sendMail({
+        to: user.email,
+        subject: 'Active your account at HermesShop',
+        template: 'register.hbs',
+        context: {
+          name: user.username ?? user.email,
+          activationCode: codeId,
+        },
+      })
+      .then(() => {})
+      .catch(() => {});
   }
 }

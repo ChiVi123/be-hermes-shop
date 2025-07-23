@@ -14,6 +14,10 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
     return user;
   }
 }
