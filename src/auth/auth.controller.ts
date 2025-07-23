@@ -15,6 +15,26 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Get('mail')
+  mailTest() {
+    this.mailerService
+      .sendMail({
+        to: 'admin210725@gmail.com', // list of receivers
+        subject: 'Testing Nest MailerModule ✔', // Subject line
+        text: 'welcome', // plaintext body
+        template: 'register.hbs', // HTML body content
+        context: {
+          name: 'Test',
+          activationCode: '123456',
+        },
+      })
+      .then(() => {})
+      .catch(() => {});
+
+    return { message: 'Mail test endpoint' };
+  }
+
+  @Public()
   @UseGuards(LocalAuthGuard)
   @Post('login')
   signIn(@Request() req: { user: Document<unknown, object, User, object> & User & { _id: Types.ObjectId } }) {
@@ -28,22 +48,8 @@ export class AuthController {
   }
 
   @Public()
-  @Get('mail')
-  mailTest() {
-    this.mailerService
-      .sendMail({
-        to: 'admin210725@gmail.com', // list of receivers
-        subject: 'Testing Nest MailerModule ✔', // Subject line
-        text: 'welcome', // plaintext body
-        template: 'register.hbs', // HTML body content
-        context: {
-          name: 'Mirai',
-          activationCode: '123456',
-        },
-      })
-      .then(() => {})
-      .catch(() => {});
-
-    return { message: 'Mail test endpoint' };
+  @Post('verify')
+  verify(@Body('email') email: string, @Body('codeId') codeId: string) {
+    return this.authService.verify(email, codeId);
   }
 }

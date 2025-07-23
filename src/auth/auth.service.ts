@@ -37,4 +37,8 @@ export class AuthService {
   register(createUserDto: CreateUserDto) {
     return this.usersService.register(createUserDto);
   }
+
+  verify(email: string, codeId: string) {
+    return this.usersService.verify(email, codeId);
+  }
 }
