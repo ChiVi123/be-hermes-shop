@@ -34,7 +34,7 @@ export class AuthService {
     };
   }
 
-  register(createUserDto: CreateUserDto): Promise<User> {
+  register(createUserDto: CreateUserDto) {
     return this.usersService.register(createUserDto);
   }
 }

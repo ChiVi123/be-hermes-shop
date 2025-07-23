@@ -1,4 +1,6 @@
+import { MailerService } from '@nestjs-modules/mailer';
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import aqp from 'api-query-params';
 import dayjs from 'dayjs';
@@ -7,11 +9,17 @@ import { v4 as uuidv4 } from 'uuid';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
 import { User } from '~/modules/users/entities/user.entity';
+import { getPropertyConfig } from '~/utils/configService';
+import { Environment } from '~/utils/constants';
 import { hashPassword } from '~/utils/hash';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService<Environment>,
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     const hashedPassword = await hashPassword(createUserDto.password);
@@ -30,14 +38,33 @@ export class UsersService {
     if (!hashedPassword) {
       throw new Error('Failed to hash password');
     }
+
+    const verifyAccountExpireTime = getPropertyConfig(this.configService, 'VERIFY_ACCOUNT_EXPIRE_TIME') ?? 5;
+    const verifyAccountExpireUnit = getPropertyConfig(this.configService, 'VERIFY_ACCOUNT_EXPIRE_UNIT') ?? 'minutes';
+    const codeId = uuidv4();
     const newUser = new this.userModel({
       ...createUserDto,
       password: hashedPassword,
       isActive: false,
-      codeId: uuidv4(),
-      codeExpired: dayjs().add(1, 'minutes'),
+      codeId,
+      codeExpired: dayjs().add(verifyAccountExpireTime, verifyAccountExpireUnit),
     });
-    return newUser.save();
+    const savedUser = await newUser.save();
+
+    this.mailerService
+      .sendMail({
+        to: savedUser.email,
+        subject: 'Active your account at HermesShop',
+        template: 'register.hbs',
+        context: {
+          name: savedUser?.username ?? savedUser.email,
+          activationCode: codeId,
+        },
+      })
+      .then(() => {})
+      .catch(() => {});
+
+    return { _id: savedUser._id };
   }
 
   async findAll(query: any) {
