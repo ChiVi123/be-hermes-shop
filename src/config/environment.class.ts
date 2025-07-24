@@ -1,4 +1,3 @@
-import { Transform } from 'class-transformer';
 import { IsIn, IsNumber, IsString, IsUrl, Matches } from 'class-validator';
 import dayjs from 'dayjs';
 
@@ -37,8 +36,7 @@ const manipulate = [
 
 export class Environment {
   @IsNumber()
-  @Transform(({ value }) => Number(value) || PORT_DEFAULT)
-  PORT: number;
+  PORT: number = PORT_DEFAULT;
 
   @IsIn(nodeEnv)
   @IsString()
@@ -46,8 +44,7 @@ export class Environment {
 
   @Matches(/^api\/v\d+$/)
   @IsString()
-  @Transform(({ value }) => String(value) || API_VERSION_DEFAULT)
-  API_VERSION: ApiVersion;
+  API_VERSION: ApiVersion = API_VERSION_DEFAULT;
 
   @IsUrl({ protocols: ['mongodb', 'mongodb+srv'], require_tld: false })
   @IsString()

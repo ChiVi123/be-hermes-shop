@@ -2,6 +2,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
 import { Document, Types } from 'mongoose';
 import { AuthService } from '~/auth/auth.service';
+import { VerifyAuthDto } from '~/auth/dto/verify-auth.dto';
 import { LocalAuthGuard } from '~/auth/passport/local-auth.guard';
 import { Public } from '~/decorators/public';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
@@ -49,7 +50,7 @@ export class AuthController {
 
   @Public()
   @Post('verify')
-  verify(@Body('email') email: string, @Body('codeId') codeId: string) {
-    return this.authService.verify(email, codeId);
+  verify(@Body() verifyAuthDto: VerifyAuthDto) {
+    return this.authService.verify(verifyAuthDto.email, verifyAuthDto.codeId);
   }
 }

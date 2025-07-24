@@ -2,7 +2,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { join } from 'path';
 import { AppController } from '~/app.controller';
@@ -11,6 +11,7 @@ import { AuthModule } from '~/auth/auth.module';
 import { JwtAuthGuard } from '~/auth/passport/jwt-auth.guard';
 import { Environment } from '~/config/environment.class';
 import { validateEnvironment } from '~/config/validation.util';
+import { ResponseInterceptor } from '~/core/response.interceptor';
 import { UsersModule } from '~/modules/users/users.module';
 
 const MAIL_PORT = 465;
@@ -65,6 +66,10 @@ const logger = new Logger('onConnectionCreate', { timestamp: true });
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+  ],
 })
 export class AppModule {}
