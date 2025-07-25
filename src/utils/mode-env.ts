@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { Environment } from '~/config/environment.class';
+import { Environment } from '~/core/environment.class';
 
 type CheckMode = (config: ConfigService<Environment, true>) => boolean;
 

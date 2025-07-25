@@ -6,7 +6,7 @@ import { AuthController } from '~/auth/auth.controller';
 import { AuthService } from '~/auth/auth.service';
 import { JwtStrategy } from '~/auth/passport/jwt.strategy';
 import { LocalStrategy } from '~/auth/passport/local.strategy';
-import { Environment } from '~/config/environment.class';
+import { Environment } from '~/core/environment.class';
 import { UsersModule } from '~/modules/users/users.module';
 
 @Module({

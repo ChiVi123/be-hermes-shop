@@ -9,13 +9,15 @@ import { AppController } from '~/app.controller';
 import { AppService } from '~/app.service';
 import { AuthModule } from '~/auth/auth.module';
 import { JwtAuthGuard } from '~/auth/passport/jwt-auth.guard';
-import { Environment } from '~/config/environment.class';
-import { validateEnvironment } from '~/config/validation.util';
+import { Environment } from '~/core/environment.class';
 import { ResponseInterceptor } from '~/core/response.interceptor';
 import { UsersModule } from '~/modules/users/users.module';
+import { classValidator } from '~/utils/validation-error';
 
 const MAIL_PORT = 465;
+
 const logger = new Logger('onConnectionCreate', { timestamp: true });
+const validateEnvironment = classValidator(Environment);
 
 @Module({
   imports: [

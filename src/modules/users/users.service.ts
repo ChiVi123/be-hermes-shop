@@ -6,7 +6,7 @@ import aqp from 'api-query-params';
 import dayjs from 'dayjs';
 import mongoose, { Document, Model, SortOrder, Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { Environment } from '~/config/environment.class';
+import { Environment } from '~/core/environment.class';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
 import { User } from '~/modules/users/entities/user.entity';
