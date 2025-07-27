@@ -1,6 +1,6 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, UnprocessableEntityException } from '@nestjs/common';
 import { ClassConstructor, plainToInstance } from 'class-transformer';
-import { validateSync, ValidationError } from 'class-validator';
+import { isMongoId, validateSync, ValidationError } from 'class-validator';
 
 export const globalValidationErrorFactory = (errors: ValidationError[]) => {
   const formattedErrors = errors.map(({ property, constraints }) => ({
@@ -25,4 +25,9 @@ export const classValidator: ClassValidator = (cls) => (plain) => {
     throw globalValidationErrorFactory(errors);
   }
   return validatedConfig;
+};
+export const handleIsMongoId = (id: unknown, message: string = 'Invalid MongoDB ID'): void => {
+  if (!isMongoId(id)) {
+    throw new BadRequestException(message);
+  }
 };

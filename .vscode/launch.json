@@ -7,7 +7,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Nest Debug",
+      "name": "BE (Nest): debug",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start:debug", "--", "--inspect-brk"],
       "console": "integratedTerminal",
