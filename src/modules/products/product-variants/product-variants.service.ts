@@ -10,4 +10,25 @@ export class ProductVariantsService {
   findAll() {
     return this.productVariantModel.find().sort({ createdAt: -1 }).limit(12).exec();
   }
+
+  syncCollection() {
+    return this.productVariantModel
+      .updateMany({}, [
+        {
+          $set: {
+            createdAt: {
+              $cond: {
+                if: { $isNumber: '$createdAt' },
+                then: { $toDate: '$createdAt' },
+                else: '$createdAt',
+              },
+            },
+          },
+        },
+        {
+          $unset: ['_hidden'],
+        },
+      ])
+      .exec();
+  }
 }

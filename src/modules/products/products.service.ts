@@ -4,6 +4,7 @@ import { Model, PipelineStage } from 'mongoose';
 import { CreateProductDto } from '~/modules/products/dto/create-product.dto';
 import { UpdateProductDto } from '~/modules/products/dto/update-product.dto';
 import { Product } from '~/modules/products/entities/product.entity';
+import { ProductVariantsService } from '~/modules/products/product-variants/product-variants.service';
 
 // const AGGREGATE_LIMIT = 12;
 const AGGREGATE_LIMIT = 2;
@@ -21,6 +22,8 @@ const SELECT_PRODUCT_FIELDS = {
   slugify: 1,
   shortDescription: 1,
   gender: 1,
+  createdAt: 1,
+  updatedAt: 1,
 };
 const SELECT_VARIANT_FIELDS = {
   _id: 1,
@@ -28,11 +31,16 @@ const SELECT_VARIANT_FIELDS = {
   price: 1,
   discountPrice: 1,
   sizes: 1,
+  createdAt: 1,
+  updatedAt: 1,
 };
 
 @Injectable()
 export class ProductsService {
-  constructor(@InjectModel(Product.name) private readonly productModel: Model<Product>) {}
+  constructor(
+    @InjectModel(Product.name) private readonly productModel: Model<Product>,
+    private readonly productVariantsService: ProductVariantsService,
+  ) {}
 
   create(createProductDto: CreateProductDto) {
     return 'This action adds a new product';
@@ -64,6 +72,7 @@ export class ProductsService {
       .exec();
   }
 
+  // TODO: Similar to findOne, but with slugify instead of ID
   async findOneBySlugify(slugify: string) {
     const result = await this.productModel
       .aggregate([
