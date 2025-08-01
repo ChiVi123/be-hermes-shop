@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { Public } from '~/decorators/public';
 import { CreateProductDto } from '~/modules/products/dto/create-product.dto';
 import { UpdateProductDto } from '~/modules/products/dto/update-product.dto';
 import { ProductsService } from '~/modules/products/products.service';
+import { Query as QueryParams } from '~/types/apiQueryParams';
 import { handleIsMongoId } from '~/utils/validation-error';
 
 @Controller('products')
@@ -16,8 +17,8 @@ export class ProductsController {
 
   @Public()
   @Get()
-  findAll() {
-    return this.productsService.findAll();
+  findAll(@Query() query: string | QueryParams) {
+    return this.productsService.findAll(query);
   }
 
   @Public()

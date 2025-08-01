@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import aqp from 'api-query-params';
 import { Model, PipelineStage } from 'mongoose';
 import { CreateProductDto } from '~/modules/products/dto/create-product.dto';
 import { UpdateProductDto } from '~/modules/products/dto/update-product.dto';
 import { Product } from '~/modules/products/entities/product.entity';
 import { ProductVariantsService } from '~/modules/products/product-variants/product-variants.service';
+import { Query } from '~/types/apiQueryParams';
 
-// const AGGREGATE_LIMIT = 12;
-const AGGREGATE_LIMIT = 2;
 const AGGREGATE_LOOKUP_VARIANTS: PipelineStage = {
   $lookup: {
     from: 'product_variants',
@@ -47,7 +47,8 @@ export class ProductsService {
   }
 
   // TODO: Implement query parameters for pagination, sorting, filtering, etc.
-  findAll() {
+  findAll(query: string | Query) {
+    const { sort, limit } = aqp(query);
     return this.productModel
       .aggregate([
         AGGREGATE_LOOKUP_VARIANTS,
@@ -63,10 +64,10 @@ export class ProductsService {
           },
         },
         {
-          $sort: { createdAt: -1 },
+          $sort: sort as Record<string, 1 | -1>,
         },
         {
-          $limit: AGGREGATE_LIMIT,
+          $limit: limit,
         },
       ])
       .exec();
