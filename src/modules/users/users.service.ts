@@ -1,18 +1,17 @@
 import { MailerService } from '@nestjs-modules/mailer';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import aqp from 'api-query-params';
 import dayjs from 'dayjs';
-import mongoose, { Document, Model, SortOrder, Types } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { Environment } from '~/core/environment.class';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
-import { User } from '~/modules/users/entities/user.entity';
+import { User, UserDocument } from '~/modules/users/entities/user.entity';
+import { Query } from '~/types/apiQueryParams';
 import { hashPassword } from '~/utils/hash';
-
-type DocumentUser = Document<unknown, object, User, object> & User & { _id: Types.ObjectId };
 
 const ACCOUNT_IS_NOT_ACTIVE = false;
 const ACCOUNT_IS_ACTIVE = true;
@@ -38,12 +37,17 @@ export class UsersService {
   }
 
   public async register(createUserDto: CreateUserDto) {
+    const isAccountExist = await this.userModel.exists({ email: createUserDto.email }).exec();
+    if (isAccountExist !== null) {
+      throw new ConflictException([{ property: 'email', constraints: ['Account is already'] }]);
+    }
+
     const hashedPassword = await hashPassword(createUserDto.password);
     if (!hashedPassword) {
       throw new Error('Failed to hash password');
     }
 
-    const verifyAccountExpireTime = this.config.get('VERIFY_ACCOUNT_EXPIRE_TIME', { infer: true }) || 24;
+    const verifyAccountExpireTime = this.config.get('VERIFY_ACCOUNT_EXPIRE_TIME', { infer: true }) || 5;
     const verifyAccountExpireUnit = this.config.get('VERIFY_ACCOUNT_EXPIRE_UNIT', { infer: true }) || 'minutes';
     const codeId = uuidv4();
     const newUser = new this.userModel({
@@ -60,10 +64,10 @@ export class UsersService {
     return { _id: savedUser._id };
   }
 
-  public async findAll(query: { [key: string]: any }) {
+  public async findAll(query: string | Query) {
     const { filter, sort } = aqp(query);
-    const page = parseInt(query.page as string) || 1;
-    const pageSize = parseInt(query.pageSize as string) || 10;
+    const page = parseInt(filter.page as string) || 1;
+    const pageSize = parseInt(filter.pageSize as string) || 10;
     const skip = (page - 1) * pageSize;
 
     if (filter.page) delete filter.page;
@@ -71,7 +75,7 @@ export class UsersService {
 
     const users = await this.userModel
       .find(filter)
-      .sort(sort as string | { [key: string]: SortOrder | { $meta: any } } | [string, SortOrder][] | undefined | null)
+      .sort(sort as Record<string, 1 | -1>)
       .skip(skip)
       .limit(pageSize)
       .select('-password')
@@ -91,21 +95,35 @@ export class UsersService {
     return this.userModel.findById(id).exec();
   }
 
-  public findByEmail(email: string) {
-    return this.userModel.findOne({ email }).exec();
+  /**
+   * Finds a user by their email address.
+   *
+   * @param email - The email address of the user to find.
+   * @param security - If true, excludes the password field in the result; otherwise, includes it. Defaults to undefined.
+   * @returns A promise that resolves to the user document if found, or null otherwise.
+   */
+  public findByEmail(email: string, security?: boolean) {
+    let modelQuery = this.userModel.findOne({ email });
+    if (security) {
+      modelQuery = modelQuery.select('-password');
+    }
+    return modelQuery.exec();
   }
 
   public update({ _id, ...updateUserDto }: UpdateUserDto) {
     return this.userModel.findByIdAndUpdate(_id, updateUserDto, { returnDocument: 'after' }).select('-password').exec();
   }
 
-  public async verify(email: string, codeId: string) {
-    const user = await this.userModel.findOne({ email, codeId, isActive: ACCOUNT_IS_NOT_ACTIVE }).exec();
+  public async verify(_id: string, codeId: string) {
+    const user = await this.userModel.findOne({ _id, codeId, isActive: ACCOUNT_IS_NOT_ACTIVE }).exec();
     if (!user) {
-      throw new NotFoundException('User not found or already active');
+      throw new NotFoundException('User not found or activated');
     }
 
-    this.handleUserCodeId(user.codeExpired);
+    const isExpired = dayjs().isAfter(dayjs(user.codeExpired));
+    if (isExpired) {
+      throw new BadRequestException('Verification code expired');
+    }
 
     await user.updateOne({ isActive: ACCOUNT_IS_ACTIVE }).exec();
 
@@ -113,25 +131,15 @@ export class UsersService {
   }
 
   public remove(id: string) {
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidObjectId(id)) {
       throw new BadRequestException(`Invalid user ID format {id}: ${id}`);
     }
 
     return this.userModel.deleteOne({ _id: id }).exec();
   }
 
-  private handleUserCodeId(codeExpired: Date) {
-    const isExpired = this.checkUserCodeIdExpired(codeExpired);
-    if (isExpired) {
-      throw new BadRequestException('Verification code expired');
-    }
-  }
-
-  private checkUserCodeIdExpired(codeExpired: Date): boolean {
-    return dayjs().isAfter(dayjs(codeExpired));
-  }
-
-  private sendMailAccountActivation(user: DocumentUser, codeId: string): void {
+  private sendMailAccountActivation(user: UserDocument, codeId: string): void {
+    // TODO: should insert button for copy the code active account - use js handle the feature
     this.mailerService
       .sendMail({
         to: user.email,

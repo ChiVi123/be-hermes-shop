@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Document, Types } from 'mongoose';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
-import { User } from '~/modules/users/entities/user.entity';
+import { UserDocument } from '~/modules/users/entities/user.entity';
 import { UsersService } from '~/modules/users/users.service';
 import { comparePassword } from '~/utils/hash';
 
@@ -27,7 +26,7 @@ export class AuthService {
     return user;
   }
 
-  signIn(user: Document<unknown, object, User, object> & User & { _id: Types.ObjectId }): { accessToken: string } {
+  signIn(user: UserDocument): { accessToken: string } {
     const payload = { sub: user._id, username: user.email };
     return {
       accessToken: this.jwtService.sign(payload),
@@ -38,7 +37,7 @@ export class AuthService {
     return this.usersService.register(createUserDto);
   }
 
-  verify(email: string, codeId: string) {
-    return this.usersService.verify(email, codeId);
+  verify(id: string, codeId: string) {
+    return this.usersService.verify(id, codeId);
   }
 }

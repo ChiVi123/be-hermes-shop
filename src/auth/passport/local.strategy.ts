@@ -6,7 +6,7 @@ import { AuthService } from '~/auth/auth.service';
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private authService: AuthService) {
-    super();
+    super({ usernameField: 'email' }); // NOTE: https://stackoverflow.com/a/74017816
   }
 
   async validate(username: string, password: string): Promise<any> {
@@ -14,7 +14,8 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    if (!user.isActive) {
+    const { isActive } = user;
+    if (!isActive) {
       throw new UnauthorizedException('Account is not active');
     }
 

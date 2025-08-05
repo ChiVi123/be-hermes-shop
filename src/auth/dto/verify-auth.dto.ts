@@ -1,9 +1,9 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsMongoId, IsNotEmpty, IsString } from 'class-validator';
 
 export class VerifyAuthDto {
-  @IsEmail()
+  @IsMongoId()
   @IsNotEmpty()
-  email: string;
+  id: string;
 
   @IsString()
   @IsNotEmpty()
