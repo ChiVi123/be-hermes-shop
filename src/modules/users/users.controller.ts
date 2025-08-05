@@ -22,7 +22,7 @@ export class UsersController {
 
   @Get('me')
   findOne(@Request() req: { user: { username: string } }) {
-    return this.usersService.findByEmail(req.user.username, false);
+    return this.usersService.findByEmail(req.user.username, true);
   }
 
   @Patch()
