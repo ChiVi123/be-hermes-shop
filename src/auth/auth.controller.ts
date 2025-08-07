@@ -1,6 +1,7 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from '~/auth/auth.service';
+import { ResendMailDto } from '~/auth/dto/resend-mail.dto';
 import { VerifyAuthDto } from '~/auth/dto/verify-auth.dto';
 import { LocalAuthGuard } from '~/auth/passport/local-auth.guard';
 import { Public } from '~/decorators/public';
@@ -45,6 +46,12 @@ export class AuthController {
   @Post('register')
   signUp(@Body() createUserDto: CreateUserDto) {
     return this.authService.register(createUserDto);
+  }
+
+  @Public()
+  @Post('resend-mail')
+  resendMail(@Body() resendMailDto: ResendMailDto) {
+    return this.authService.resendMail(resendMailDto);
   }
 
   @Public()

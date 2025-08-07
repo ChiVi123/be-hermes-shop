@@ -138,6 +138,23 @@ export class UsersService {
     return this.userModel.deleteOne({ _id: id }).exec();
   }
 
+  public async resendMail(email: string) {
+    const user = await this.findByEmail(email, true);
+    if (!user) {
+      throw new NotFoundException('User not found or activated');
+    }
+    const codeId = uuidv4();
+    const verifyAccountExpireTime = this.config.get('VERIFY_ACCOUNT_EXPIRE_TIME', { infer: true }) || 5;
+    const verifyAccountExpireUnit = this.config.get('VERIFY_ACCOUNT_EXPIRE_UNIT', { infer: true }) || 'minutes';
+
+    user.codeId = codeId;
+    user.codeExpired = dayjs().add(verifyAccountExpireTime, verifyAccountExpireUnit).toDate();
+
+    const savedUser = await user.save();
+    this.sendMailAccountActivation(savedUser, codeId);
+    return { _id: savedUser._id };
+  }
+
   private sendMailAccountActivation(user: UserDocument, codeId: string): void {
     // TODO: should insert button for copy the code active account - use js handle the feature
     this.mailerService

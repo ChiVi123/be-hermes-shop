@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ResendMailDto } from '~/auth/dto/resend-mail.dto';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UserDocument } from '~/modules/users/entities/user.entity';
 import { UsersService } from '~/modules/users/users.service';
@@ -35,6 +36,10 @@ export class AuthService {
 
   register(createUserDto: CreateUserDto) {
     return this.usersService.register(createUserDto);
+  }
+
+  resendMail(resendMailDto: ResendMailDto) {
+    return this.usersService.resendMail(resendMailDto.toMail);
   }
 
   verify(id: string, codeId: string) {
