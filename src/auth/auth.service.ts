@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ResendMailDto } from '~/auth/dto/resend-mail.dto';
+import { ChangePasswordDto } from '~/auth/dto/change-password';
+import { RetryActiveDto } from '~/auth/dto/retry-active.dto';
+import { RetryPasswordDto } from '~/auth/dto/retry-password.dto';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UserDocument } from '~/modules/users/entities/user.entity';
 import { UsersService } from '~/modules/users/users.service';
@@ -38,11 +40,19 @@ export class AuthService {
     return this.usersService.register(createUserDto);
   }
 
-  resendMail(resendMailDto: ResendMailDto) {
-    return this.usersService.resendMail(resendMailDto.toMail);
+  retryActive(retryActiveDto: RetryActiveDto) {
+    return this.usersService.retryActive(retryActiveDto.toMail);
   }
 
-  verify(id: string, codeId: string) {
-    return this.usersService.verify(id, codeId);
+  verify(userId: string, codeId: string) {
+    return this.usersService.verify(userId, codeId);
+  }
+
+  retryPassword(retryPasswordDto: RetryPasswordDto) {
+    return this.usersService.retryPassword(retryPasswordDto.toMail);
+  }
+
+  changePassword(changePasswordDto: ChangePasswordDto) {
+    return this.usersService.changePassword(changePasswordDto);
   }
 }

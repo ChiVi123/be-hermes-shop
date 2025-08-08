@@ -1,7 +1,9 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from '~/auth/auth.service';
-import { ResendMailDto } from '~/auth/dto/resend-mail.dto';
+import { ChangePasswordDto } from '~/auth/dto/change-password';
+import { RetryActiveDto } from '~/auth/dto/retry-active.dto';
+import { RetryPasswordDto } from '~/auth/dto/retry-password.dto';
 import { VerifyAuthDto } from '~/auth/dto/verify-auth.dto';
 import { LocalAuthGuard } from '~/auth/passport/local-auth.guard';
 import { Public } from '~/decorators/public';
@@ -49,14 +51,26 @@ export class AuthController {
   }
 
   @Public()
-  @Post('resend-mail')
-  resendMail(@Body() resendMailDto: ResendMailDto) {
-    return this.authService.resendMail(resendMailDto);
+  @Post('retry-active')
+  retryActive(@Body() retryActiveDto: RetryActiveDto) {
+    return this.authService.retryActive(retryActiveDto);
   }
 
   @Public()
   @Post('verify')
   verify(@Body() verifyAuthDto: VerifyAuthDto) {
-    return this.authService.verify(verifyAuthDto.id, verifyAuthDto.codeId);
+    return this.authService.verify(verifyAuthDto.userId, verifyAuthDto.codeId);
+  }
+
+  @Public()
+  @Post('retry-password')
+  retryPassword(@Body() retryPasswordDto: RetryPasswordDto) {
+    return this.authService.retryPassword(retryPasswordDto);
+  }
+
+  @Public()
+  @Post('change-password')
+  changePassword(@Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePassword(changePasswordDto);
   }
 }

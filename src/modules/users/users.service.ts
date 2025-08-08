@@ -1,4 +1,4 @@
-import { MailerService } from '@nestjs-modules/mailer';
+import { ISendMailOptions, MailerService } from '@nestjs-modules/mailer';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -6,6 +6,7 @@ import aqp from 'api-query-params';
 import dayjs from 'dayjs';
 import { isValidObjectId, Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { ChangePasswordDto } from '~/auth/dto/change-password';
 import { Environment } from '~/core/environment.class';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
@@ -59,7 +60,7 @@ export class UsersService {
     });
     const savedUser = await newUser.save();
 
-    this.sendMailAccountActivation(savedUser, codeId);
+    this.sendMailWrapper(this.mailOptionToActiveAccount(savedUser, codeId));
 
     return { _id: savedUser._id };
   }
@@ -114,8 +115,8 @@ export class UsersService {
     return this.userModel.findByIdAndUpdate(_id, updateUserDto, { returnDocument: 'after' }).select('-password').exec();
   }
 
-  public async verify(_id: string, codeId: string) {
-    const user = await this.userModel.findOne({ _id, codeId, isActive: ACCOUNT_IS_NOT_ACTIVE }).exec();
+  public async verify(userId: string, codeId: string) {
+    const user = await this.userModel.findOne({ _id: userId, codeId, isActive: ACCOUNT_IS_NOT_ACTIVE }).exec();
     if (!user) {
       throw new NotFoundException('User not found or activated');
     }
@@ -138,7 +139,7 @@ export class UsersService {
     return this.userModel.deleteOne({ _id: id }).exec();
   }
 
-  public async resendMail(email: string) {
+  public async retryActive(email: string) {
     const user = await this.findByEmail(email, true);
     if (!user) {
       throw new NotFoundException('User not found or activated');
@@ -151,23 +152,77 @@ export class UsersService {
     user.codeExpired = dayjs().add(verifyAccountExpireTime, verifyAccountExpireUnit).toDate();
 
     const savedUser = await user.save();
-    this.sendMailAccountActivation(savedUser, codeId);
+    this.sendMailWrapper(this.mailOptionToActiveAccount(savedUser, codeId));
     return { _id: savedUser._id };
   }
 
-  private sendMailAccountActivation(user: UserDocument, codeId: string): void {
-    // TODO: should insert button for copy the code active account - use js handle the feature
+  public async retryPassword(email: string) {
+    const user = await this.findByEmail(email, true);
+    if (!user) {
+      throw new NotFoundException('User not found or activated');
+    }
+    const codeId = uuidv4();
+    const verifyAccountExpireTime = this.config.get('VERIFY_ACCOUNT_EXPIRE_TIME', { infer: true }) || 5;
+    const verifyAccountExpireUnit = this.config.get('VERIFY_ACCOUNT_EXPIRE_UNIT', { infer: true }) || 'minutes';
+
+    user.codeId = codeId;
+    user.codeExpired = dayjs().add(verifyAccountExpireTime, verifyAccountExpireUnit).toDate();
+
+    const savedUser = await user.save();
+    this.sendMailWrapper(this.mailOptionToActiveResetPassword(savedUser, codeId));
+    return { _id: savedUser._id, email: savedUser.email };
+  }
+
+  public async changePassword({ userId, codeId, password }: ChangePasswordDto) {
+    const user = await this.userModel.findOne({ _id: userId, codeId }).exec();
+    if (!user) {
+      throw new NotFoundException('User not found or activated');
+    }
+
+    const isExpired = dayjs().isAfter(dayjs(user.codeExpired));
+    if (isExpired) {
+      throw new BadRequestException('Verification code expired');
+    }
+
+    const hashedPassword = await hashPassword(password);
+    if (!hashedPassword) {
+      throw new Error('Failed to hash password');
+    }
+
+    await user.updateOne({ password: hashedPassword }).exec();
+
+    return { message: 'Change password successfully' };
+  }
+
+  private sendMailWrapper(sendMailOptions: ISendMailOptions) {
     this.mailerService
-      .sendMail({
-        to: user.email,
-        subject: 'Active your account at HermesShop',
-        template: 'register.hbs',
-        context: {
-          name: user.username ?? user.email,
-          activationCode: codeId,
-        },
-      })
+      .sendMail(sendMailOptions)
       .then(() => {})
       .catch(() => {});
+  }
+
+  private mailOptionToActiveAccount(user: UserDocument, codeId: string): ISendMailOptions {
+    return {
+      to: user.email,
+      subject: 'Active your account at HermesShop',
+      template: 'register.hbs',
+      context: {
+        name: user.username ?? user.email,
+        codeId,
+      },
+    };
+  }
+
+  private mailOptionToActiveResetPassword(user: UserDocument, codeId: string): ISendMailOptions {
+    return {
+      to: user.email,
+      subject: 'Reset your password at HermesShop',
+      template: 'reset-password.hbs',
+      context: {
+        name: user.username ?? user.email,
+        email: user.email,
+        codeId,
+      },
+    };
   }
 }

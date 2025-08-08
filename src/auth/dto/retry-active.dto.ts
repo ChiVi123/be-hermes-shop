@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty } from 'class-validator';
 
-export class ResendMailDto {
+export class RetryActiveDto {
   @IsEmail()
   @IsNotEmpty()
   toMail: string;
