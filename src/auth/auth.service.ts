@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Document, Types } from 'mongoose';
+import { ChangePasswordDto } from '~/auth/dto/change-password';
+import { RetryActiveDto } from '~/auth/dto/retry-active.dto';
+import { RetryPasswordDto } from '~/auth/dto/retry-password.dto';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
-import { User } from '~/modules/users/entities/user.entity';
+import { UserDocument } from '~/modules/users/entities/user.entity';
 import { UsersService } from '~/modules/users/users.service';
 import { comparePassword } from '~/utils/hash';
 
@@ -27,7 +29,7 @@ export class AuthService {
     return user;
   }
 
-  signIn(user: Document<unknown, object, User, object> & User & { _id: Types.ObjectId }): { accessToken: string } {
+  signIn(user: UserDocument): { accessToken: string } {
     const payload = { sub: user._id, username: user.email };
     return {
       accessToken: this.jwtService.sign(payload),
@@ -38,7 +40,19 @@ export class AuthService {
     return this.usersService.register(createUserDto);
   }
 
-  verify(email: string, codeId: string) {
-    return this.usersService.verify(email, codeId);
+  retryActive(retryActiveDto: RetryActiveDto) {
+    return this.usersService.retryActive(retryActiveDto.toMail);
+  }
+
+  verify(userId: string, codeId: string) {
+    return this.usersService.verify(userId, codeId);
+  }
+
+  retryPassword(retryPasswordDto: RetryPasswordDto) {
+    return this.usersService.retryPassword(retryPasswordDto.toMail);
+  }
+
+  changePassword(changePasswordDto: ChangePasswordDto) {
+    return this.usersService.changePassword(changePasswordDto);
   }
 }

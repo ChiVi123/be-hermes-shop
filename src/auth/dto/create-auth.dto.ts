@@ -5,6 +5,7 @@ export class CreateAuthDto {
   @IsNotEmpty()
   email: string;
 
+  // TODO: validate password not just check type string, use regex
   @IsString()
   @IsNotEmpty()
   password: string;

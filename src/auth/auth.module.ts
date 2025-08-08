@@ -8,6 +8,7 @@ import { JwtStrategy } from '~/auth/passport/jwt.strategy';
 import { LocalStrategy } from '~/auth/passport/local.strategy';
 import { Environment } from '~/core/environment.class';
 import { UsersModule } from '~/modules/users/users.module';
+import { isProduction } from '~/utils/mode-env';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { UsersModule } from '~/modules/users/users.module';
         global: true,
         secret: config.get('ACCESS_TOKEN_SECRET_SIGNATURE', { infer: true }),
         signOptions: {
-          expiresIn: config.get('ACCESS_TOKEN_LIFE', { infer: true }),
+          expiresIn: isProduction(config) ? config.get('ACCESS_TOKEN_LIFE', { infer: true }) : '1m',
         },
       }),
       inject: [ConfigService],

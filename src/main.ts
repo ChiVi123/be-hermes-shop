@@ -18,6 +18,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService<Environment, true>);
   const port = configService.get('PORT', { infer: true });
   const apiVersion = configService.get('API_VERSION', { infer: true });
+  const corsOrigin = configService.get('CORS_ORIGIN', { infer: true });
   const validationPipe = isDebug(configService)
     ? new DebugValidationPipe() // Breakpoint for debugging file src/debug/debug-validation.pipe.ts
     : new ValidationPipe({
@@ -27,6 +28,12 @@ async function bootstrap() {
       });
 
   app.enableShutdownHooks();
+  app.enableCors({
+    origin: corsOrigin,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: false,
+    credentials: true,
+  });
   app.useGlobalPipes(validationPipe);
   app.setGlobalPrefix(apiVersion, { exclude: [{ path: '', method: RequestMethod.GET }] });
 

@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request } from '@nestjs/common';
 import { Public } from '~/decorators/public';
 import { CreateUserDto } from '~/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '~/modules/users/dto/update-user.dto';
 import { UsersService } from '~/modules/users/users.service';
+import { Query as QueryParams } from '~/types/apiQueryParams';
 
 @Controller('users')
 export class UsersController {
@@ -15,13 +16,13 @@ export class UsersController {
 
   @Public()
   @Get()
-  findAll(@Query() query: any) {
+  findAll(@Query() query: string | QueryParams) {
     return this.usersService.findAll(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @Get('me')
+  findOne(@Request() req: { user: { username: string } }) {
+    return this.usersService.findByEmail(req.user.username, true);
   }
 
   @Patch()

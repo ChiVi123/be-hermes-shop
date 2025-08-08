@@ -46,6 +46,9 @@ export class Environment {
   @IsString()
   API_VERSION: ApiVersion = API_VERSION_DEFAULT;
 
+  @IsString()
+  CORS_ORIGIN: string;
+
   @IsUrl({ protocols: ['mongodb', 'mongodb+srv'], require_tld: false })
   @IsString()
   MONGO_URI: string;
